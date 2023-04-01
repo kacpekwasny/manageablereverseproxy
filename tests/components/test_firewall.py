@@ -1,17 +1,18 @@
-from unittest import TestCase
+import unittest
+import logging
+
+from flask import Request as flRequest
 from time import sleep
 
-import logging
+
+from manageablereverseproxy import Request, Response, FirewallIP
+
 
 logging.basicConfig()
 logging.getLogger().setLevel(-1)
 
-from manageablereverseproxy import Request, Response, FirewallIP
-from flask import Request as flRequest
 
-
-
-class TestFirewallIP(TestCase):
+class TestFirewallIP(unittest.TestCase):
     
     def setUp(self) -> None:
         self.fw = FirewallIP()
@@ -20,7 +21,6 @@ class TestFirewallIP(TestCase):
         
         self.r2 = Request(flRequest({}))
         self.r2.ip_address = "ip2"
-
 
     def test_block_too_many_requests_time_window(self):
         self.fw.set_time_window(1).set_max_requests_in_time_window(5)
@@ -69,5 +69,4 @@ class TestFirewallIP(TestCase):
 
 
 
-import unittest
 unittest.main()

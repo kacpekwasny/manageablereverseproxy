@@ -1,5 +1,4 @@
-from ..wrapperclass.request import Request
-from ..wrapperclass.response import Response
+from ..wrapperclass import Request, Response
 
 class ComponentBase:
 
@@ -10,6 +9,6 @@ class ComponentBase:
         Example:
             comp1 -> comp2 -> comp3
             if copm1.process_request() returns Response it will not be passed to 
-
         """
+        raise NotImplementedError("This function has to be implemented by child class.")
 

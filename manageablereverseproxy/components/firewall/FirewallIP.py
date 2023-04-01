@@ -47,8 +47,13 @@ class FirewallIP(ComponentBase):
     def firewall_whitelist_only(self) -> bool:
         return self.max_requests_in_time_window == 0
     
-    def ip_whitelisted(self, ip: str) -> bool:
-        return self.max_requests_in_time_window
+    def ip_is_whitelisted(self, ip: str) -> bool:
+        return ip in self.white_list
+
+    def add_ip_to_whitelist(self, ip: str) -> None:
+        if self.ip_is_whitelisted(ip):
+            self.lgr.debug("IP %s was allready whitelisted", ip)
+        self.white_list.add(ip)
 
     def process_request(self, req: Request) -> Response | Request:
         if self.firewall_disabled():
@@ -57,12 +62,12 @@ class FirewallIP(ComponentBase):
         # using "." in python is expensive :')
         ip = req.ip_address
 
-        if self.ip_whitelisted(ip):
+        if self.ip_is_whitelisted(ip):
             return req
-
+        
         if self.firewall_whitelist_only():
             return Response(flResponse("Only whitelisted IP address are let through.", status=401))
-
+        
         self.register_incoming_request(ip)
         
         if self.ip_is_blocked(ip):
@@ -74,26 +79,34 @@ class FirewallIP(ComponentBase):
         """
         Update cache with information on the traffic from this IP address.
         """
+        curr_time = time()
+
         if ip in self.registered_traffic:
             # register new traffic record
             ip_traffic = self.registered_traffic[ip]
-            curr_time = time()
             ip_traffic.append(curr_time)
 
             # find old traffic recorods
+            idx = -1
             for i, t in enumerate(ip_traffic):
-                if curr_time - t < self.time_window:
+                if curr_time - t > self.time_window:
+                    idx = i
                     break
 
             # discard old traffic records
-            if i > 0:
-                ip_traffic = ip_traffic[i-1:]
+            if idx > -1:
+                ip_traffic = ip_traffic[idx+1:]
                 self.registered_traffic[ip] = ip_traffic
+            return
+        
+        # ip not in registered_traffic
+        self.registered_traffic[ip] = [curr_time]
 
     def ip_is_blocked(self, ip: str) -> bool:
         """
         IP address had made too many requests during time window.
         """       
         # count requests in time window
-        return len(self.registered_traffic[ip]) > self.max_requests_in_time_window
+        count = len(self.registered_traffic[ip])
+        return count > self.max_requests_in_time_window
 

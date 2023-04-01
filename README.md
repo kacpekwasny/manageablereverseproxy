@@ -1,4 +1,4 @@
-# managablereverseproxy
+# manageablereverseproxy
 Reverse proxy managed by a web GUI
 
 

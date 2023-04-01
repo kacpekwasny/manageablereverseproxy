@@ -1,3 +1,6 @@
+from __future__ import annotations
+import logging
+
 from flask import Response as flResponse
 from time import time
 
@@ -22,22 +25,54 @@ class FirewallIP(ComponentBase):
         self.white_list: set[str] = set()
         "Set of IP addresses that are allowed to spam how much they want (like an admin)."
 
+        self.lgr: logging.Logger = logging.getLogger()
 
-    def process_request(self, r: Request) -> Response | Request:
+
+    def set_time_window(self, seconds: float) -> FirewallIP:
+        # time window smaller than .1 doesnt realy make sens
+        self.time_window = seconds if seconds > .1 else 0
+        if self.time_window == 0:
+            self.lgr.warning("FirewallIP is DISABLED! The time window was set to %.2f[sec], so it was converted to zero, and thus the `FirewallIP` became disabled!", seconds)
+        return self
+
+    def set_max_requests_in_time_window(self, req_num: int) -> FirewallIP:
+        self.max_requests_in_time_window = int(max(0, req_num))
+        if self.max_requests_in_time_window == 0:
+            self.lgr.warning("FirewallIP allows only whitelisted IP addresses! This is because `req_num` was set to zero.")
+        return self
+
+    def firewall_disabled(self) -> bool:
+        return self.time_window == 0
+    
+    def firewall_whitelist_only(self) -> bool:
+        return self.max_requests_in_time_window == 0
+    
+    def ip_whitelisted(self, ip: str) -> bool:
+        return self.max_requests_in_time_window
+
+    def process_request(self, req: Request) -> Response | Request:
+        if self.firewall_disabled():
+            return req
+
         # using "." in python is expensive :')
-        ip = r.ip_address
+        ip = req.ip_address
 
-        if ip in self.white_list:
-            return r
+        if self.ip_whitelisted(ip):
+            return req
+
+        if self.firewall_whitelist_only():
+            return Response(flResponse("Only whitelisted IP address are let through.", status=401))
 
         self.register_incoming_request(ip)
+        
         if self.ip_is_blocked(ip):
             return Response(flResponse("To many requests, you are currently banned.", status=401))
-        return r
+        
+        return req
     
     def register_incoming_request(self, ip: str) -> None:
         """
-        
+        Update cache with information on the traffic from this IP address.
         """
         if ip in self.registered_traffic:
             # register new traffic record
@@ -54,12 +89,10 @@ class FirewallIP(ComponentBase):
             if i > 0:
                 ip_traffic = ip_traffic[i-1:]
                 self.registered_traffic[ip] = ip_traffic
-            
-
 
     def ip_is_blocked(self, ip: str) -> bool:
         """
-        If the requests are
+        IP address had made too many requests during time window.
         """       
         # count requests in time window
         return len(self.registered_traffic[ip]) > self.max_requests_in_time_window

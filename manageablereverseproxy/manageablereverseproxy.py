@@ -3,7 +3,7 @@ import requests
 from flask import Flask, request, Response
 
 
-class ManagableReverseProxy(Flask):
+class ManageableReverseProxy(Flask):
     """
     """
     SITE_NAME = "http://localhost:5000"
@@ -12,7 +12,7 @@ class ManagableReverseProxy(Flask):
         super().__init__(*args, **kwargs)
 
 
-mrp = ManagableReverseProxy()
+mrp = ManageableReverseProxy()
 
 @mrp.route('/', defaults={'path': ''})
 @mrp.route("/<path:path>",methods=["GET","POST","DELETE"])

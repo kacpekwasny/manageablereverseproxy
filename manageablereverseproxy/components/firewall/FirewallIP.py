@@ -5,8 +5,6 @@ from flask import Response as flResponse
 from time import time
 
 from ..component import ComponentBase, Response, Request
-from ..multiprocessing_cache import NoPersistanceCache
-
 
 
 class FirewallIP(ComponentBase):
@@ -15,8 +13,20 @@ class FirewallIP(ComponentBase):
     """
 
     def __init__(self) -> None:
+        self.registered_traffic: dict[str, list[float]] = {}
+        "Stores timestamps of incomping requests for ip address"
+
+        self.time_window: float = 60
+        "Time window in which requests for an IP address cannot reach over specific number."
+
+        self.max_requests_in_time_window: int = 200
+        "If a request would be the 201 request during time_window, the request will be blocked (and registered)."
+
+        self.white_list: set[str] = set()
+        "Set of IP addresses that are allowed to spam how much they want (like an admin)."
+
         self.lgr: logging.Logger = logging.getLogger()
-        self._cache: FirewallCache = FirewallCache()
+
 
     def set_time_window(self, seconds: float) -> FirewallIP:
         # time window smaller than .1 doesnt realy make sens
@@ -71,10 +81,9 @@ class FirewallIP(ComponentBase):
         """
         curr_time = time()
 
-        regtraff = self._cache.get_registered_traffic()
-        if ip in regtraff:
+        if ip in self.registered_traffic:
             # register new traffic record
-            ip_traffic = regtraff[ip]
+            ip_traffic = self.registered_traffic[ip]
             ip_traffic.append(curr_time)
 
             # find old traffic recorods
@@ -100,45 +109,4 @@ class FirewallIP(ComponentBase):
         # count requests in time window
         count = len(self.registered_traffic[ip])
         return count > self.max_requests_in_time_window
-
-
-class FirewallCache(NoPersistanceCache):
-    """
-    
-    """
-
-    registered_traffic: dict[str, list[float]]
-    "Stores timestamps of incomping requests for ip address"
-
-    time_window: float
-    "Time window in which requests for an IP address cannot reach over specific number."
-
-    max_requests_in_time_window: int
-    "If a request would be the 201 request during time_window, the request will be blocked (and registered)."
-
-    white_list: set[str]
-    "Set of IP addresses that are allowed to spam how much they want (like an admin)."
-
-
-    def __init__(self) -> None:
-        self.registered_traffic = {}
-        self.time_windowfloat = 60
-        self.max_requests_in_time_window = 200
-        self.white_list = set()
-
-    def get_registered_traffic(self) -> dict[str, list[float]]:
-        return self.registered_traffic
-    
-    def get_time_window(self) -> float:
-        return self.time_window
-    
-    def get_max_requests_in_time_window(self) -> int:
-        return self.max_requests_in_time_window
-    
-    def get_white_list(self) -> set:
-        return self.white_list
-
-
-
-
 

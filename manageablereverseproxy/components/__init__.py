@@ -1,1 +1,1 @@
-from .firewall.FirewallIP import FirewallIP
+from .firewall.firewallip import FirewallIP

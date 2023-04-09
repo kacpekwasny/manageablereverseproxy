@@ -4,7 +4,7 @@ import logging
 from flask import Response as flResponse
 from time import time
 
-from ..component import ComponentBase, Response, Request
+from ..component_base import ComponentBase, Response, Request
 
 
 class FirewallIP(ComponentBase):
@@ -109,4 +109,10 @@ class FirewallIP(ComponentBase):
         # count requests in time window
         count = len(self.registered_traffic[ip])
         return count > self.max_requests_in_time_window
+
+
+class SharedState:
+
+    registered_traffic: dict[str, int]
+
 

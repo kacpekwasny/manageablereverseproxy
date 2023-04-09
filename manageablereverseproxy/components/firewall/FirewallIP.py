@@ -4,7 +4,9 @@ import logging
 from flask import Response as flResponse
 from time import time
 
+
 from ..component_base import ComponentBase, Response, Request
+from ..shared_state import SharedStateBase
 
 
 class FirewallIP(ComponentBase):
@@ -13,17 +15,8 @@ class FirewallIP(ComponentBase):
     """
 
     def __init__(self) -> None:
-        self.registered_traffic: dict[str, list[float]] = {}
-        "Stores timestamps of incomping requests for ip address"
-
-        self.time_window: float = 60
-        "Time window in which requests for an IP address cannot reach over specific number."
-
-        self.max_requests_in_time_window: int = 200
-        "If a request would be the 201 request during time_window, the request will be blocked (and registered)."
-
-        self.white_list: set[str] = set()
-        "Set of IP addresses that are allowed to spam how much they want (like an admin)."
+        self.st: SharedState = SharedState()
+        """Multiprocessing requires the use of `multiprocessing.Manger` and shared variables."""
 
         self.lgr: logging.Logger = logging.getLogger()
 
@@ -111,8 +104,68 @@ class FirewallIP(ComponentBase):
         return count > self.max_requests_in_time_window
 
 
-class SharedState:
+class SharedState(SharedStateBase):
 
-    registered_traffic: dict[str, int]
+    def __init__(self) -> None:
+        super().__init__()
 
+        self._request_count_lock = self._m.Lock()
+        self._request_count: dict[str, int] = self._m.dict()
+        "Maps number of requests to an IP address."
+
+        self._count_clean_delay_lock = self._m.Lock()
+        self._count_clean_delay: float = self._m.Value(typecode=float, value=10.0)
+        "Time between reductions of count in `_request_count`."
+
+        self._max_requests_count_lock = self._m.Lock()
+        self._max_requests_count: int = self._m.Value(typecode=int, value=200)
+        "If a request would be the 201 counted request, the request will be blocked (and counted)."
+
+        self._white_list_lock = self._m.Lock()
+        self._white_list: list[str] = self._m.list()
+        "Set of IP addresses that are allowed to spam how much they want (like an admin)."
+
+        self._black_list_lock = self._m.Lock()
+        self._black_list: list[str] = self._m.list()
+        "Set of IP addresses that are banned from all communication."
+
+    def request_count_add(self, addr: str) -> bool:
+        """
+        return `bool` - addr allowed for further communications.
+        """
+        self._request_count_lock.acquire()
+        try:
+            count = self._request_count.get(addr, None)
+            if count is None:
+                count = 0
+            else:
+                count += 1
+            self._request_count[addr] = count
+            return count < self._max_requests_count
+        
+        finally:
+            self._request_count_lock.release()
+                    
+    def white_black_list(self, addr: str) -> bool | None:
+        """
+        return bool - True (white), False (black), None (neither)
+        """
+        # Check whitelist
+        self._white_list_lock.acquire()
+        try:
+            if addr in self._white_list:
+                return True
+        finally:
+            self._white_list_lock.release()
+
+        # Check blacklist
+        self._black_list_lock.acquire()
+        try:
+            if addr in self._black_list:
+                return False
+        finally:
+            self._black_list_lock.release()
+        
+        return None
+        
 

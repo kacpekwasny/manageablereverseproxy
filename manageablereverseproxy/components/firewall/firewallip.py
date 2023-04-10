@@ -1,8 +1,9 @@
 from __future__ import annotations
 import logging
 
+from multiprocessing import Process
 from flask import Response as flResponse
-from time import time
+from time import sleep, time
 
 
 from ..component_base import ComponentBase, Response, Request
@@ -96,6 +97,20 @@ class SharedState(SharedStateBase):
         self._whitelist_only_lock = self._m.Lock()
         self._whitelist_only: bool = self._m.Value(bool, False)
         "Firewall allows only traffic that originate from whitelisted ip addresses."
+
+        self._count_cleaner: Process = Process(self.run_count_cleaner)
+
+    def run_count_cleaner(self) -> None:
+        while True:
+            sleep(self._count_clean_delay)
+            self._request_count_lock.acquire()
+            try:
+                for addr, count in self._request_count.items():
+                    self._request_count[addr] = max(0, count - self._max_requests_count.value)
+            except Exception as e:
+                raise e
+            finally:
+                self._request_count_lock.release()
 
     def count_request_check_allowed(self, addr: str) -> bool:
         """

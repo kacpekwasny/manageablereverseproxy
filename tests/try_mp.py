@@ -17,20 +17,20 @@ def request_maker(d: dict, l: Lock, i: int):
 
 def request_meter(d: dict, l: Lock):
     while True:
-        l.acquire()
-        try:
-            rqs = d['ip']
-            ln = len(rqs)
-            print(ln)
-    
-            if ln > 2:
-                t = rqs[-1] - rqs[0]
-                print(ln, t, t/ln)
-                if ln >= 1000:
-                    return
+        # l.acquire()
+        rqs = d['ip'][:]
+        ln = len(rqs)
+        # print(ln)
 
-        finally:
-            l.release()
+        if ln > 2:
+            t = rqs[-1] - rqs[0]
+            print(ln, t, t/ln)
+            if ln >= 1000:
+                return
+        # try:
+
+        # finally:
+            # l.release()
 
 
 if __name__ == '__main__':

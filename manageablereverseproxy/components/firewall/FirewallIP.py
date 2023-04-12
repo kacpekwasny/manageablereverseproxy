@@ -111,3 +111,4 @@ class FirewallIP(ComponentBase):
         count = len(self.registered_traffic[ip])
         return count > self.max_requests_in_time_window
 
+

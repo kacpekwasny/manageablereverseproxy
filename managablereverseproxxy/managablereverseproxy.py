@@ -1,3 +1,5 @@
+from time import perf_counter
+
 import requests
 
 from flask import Flask, request, Response
@@ -9,50 +11,26 @@ class ManagableReverseProxy(Flask):
     SITE_NAME = "http://localhost:5000"
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, import_name=__name__)
 
 
 mrp = ManagableReverseProxy()
 
-@mrp.route('/', defaults={'path': ''})
-@mrp.route("/<path:path>",methods=["GET","POST","DELETE"])
+
+@mrp.route('/', defaults={'path': ''},  methods=["GET", "POST"])
+@mrp.route("/<path:path>",  methods=["GET", "POST"])
 def proxy(path):
-    start = perf_counter()
-    try:
-        global SITE_NAME
-        if request.method=="GET":
-            resp = requests.get(f"{SITE_NAME}{path}", headers=request.headers, cookies=request.cookies, allow_redirects=False)
-            excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
-            headers = [(name, value) for (name, value) in  resp.raw.headers.items() if name.lower() not in excluded_headers]
-            response = Response(resp.content.decode(errors="replace").replace("facebook.com", "/").encode(), resp.status_code, headers)
-            return response
-        
-        elif request.method=="POST":
-            print(request.headers)
-            content_type = request.headers["Content-Type"]
-            if content_type == "application/x-www-form-urlencoded":
-                # all data is in the url
-                resp = requests.post(f"{SITE_NAME}{path}", headers=request.headers, cookies=request.cookies, allow_redirects=False)
-    
-            elif content_type == "application/json":
-                resp = requests.post(f"{SITE_NAME}{path}",headers=request.headers, cookies=request.cookies, json=request.get_json(), allow_redirects=False)
-    
-            excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
-            headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
-            response = Response(resp.content, resp.status_code, headers)
-            return response
-        
-        elif request.method=="DELETE":
-            resp = requests.delete(f"{SITE_NAME}{path}", allow_redirects=False).content
-            response = Response(resp.content, resp.status_code, headers)
-            return response
-    except Exception as e:
-        print(e)
-        return "awd"
-    finally:
-        print(f"{perf_counter()-start=}")
 
+    SITE_NAME = "http://localhost:8080/"
 
-    
+    print(request.values)
+    r = requests.request(request.method, f"{SITE_NAME}{path}", params=request.values, stream=True, headers=request.headers, allow_redirects=False, data=None)
+
+    excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
+    headers = [(name, value) for (name, value) in r.raw.headers.items() if
+                       name.lower() not in excluded_headers]
+
+    return Response(r.content, r.status_code, headers)
+
 if __name__ == "__main__":
-    mrp.run(debug=True, port=80)
+    mrp.run(debug=True, port=8000)

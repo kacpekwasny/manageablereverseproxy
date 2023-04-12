@@ -1,9 +1,31 @@
-from time import perf_counter
-from flask import Flask, request, redirect, Response
 import requests
+from flask import Flask, request, redirect, Response
+from flask.scaffold import setupmethod
+from flask_sqlalchemy import SQLAlchemy
+from time import perf_counter
 
-app = Flask(__name__)
-SITE_NAME = "http://127.0.0.1:8080/"
+db = SQLAlchemy()
+
+app = Flask(__name__, )
+
+# Load config from file config.py
+app.config.from_pyfile('config.py')
+
+app.debug = True
+
+app.config['SQLALCHEMY_DATABASE_URI'] = (f"mysql://{app.config['DB_USER']}:{app.config['DB_PASSWORD']}"
+                                         f"@{app.config['DB_HOST']}/{app.config['DB_NAME']}")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+
+
+# Create test user and 50 blog entries if do not exist
+@setupmethod
+def create_user():
+    db.create_all()
+    db.session.commit()
+
+    return app
 
 
 @app.route('/', defaults={'path': ''})

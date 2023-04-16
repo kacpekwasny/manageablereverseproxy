@@ -1,13 +1,15 @@
 from __future__ import annotations
-import logging
 
 from flask import Response as flResponse
-from time import time
 
 from ..component_base import ComponentBase, Response, Request
+from ...lgr import InheritLogger
+
+from .models import ClientIPAddress, ClientIPAddressDB
+from ...app import app, db, add_commit
 
 
-class FirewallIP(ComponentBase):
+class FirewallIP(ComponentBase, InheritLogger):
     """
     Restrict the inbound requests from IP adresses.
     """
@@ -16,22 +18,14 @@ class FirewallIP(ComponentBase):
         self.disabled: bool = False
         """All traffic is passed directly through."""
         
-        self.registered_traffic: dict[str, list[float]] = {}
-        "Stores timestamps of incomping requests for ip address"
+        self.client_cache: dict[str, ClientIPAddress] = {}
+        "Cache of `ClientIPAddr`"
 
         self.time_window: float = 60
         "Time window in which requests for an IP address cannot reach over specific number."
 
         self.max_requests_in_time_window: int = 200
         "If a request would be the 201 request during time_window, the request will be blocked (and registered)."
-
-        self.whitelist: set[str] = set()
-        "Set of IP addresses that are allowed to send as many requests as they like (ex. IP of an admin / tester)."
-
-        self.blacklist: set[str] = set()
-        "Set of IP address from which all traffic will be blocked."
-
-        self.lgr: logging.Logger = logging.getLogger()
 
 
     def set_time_window(self, seconds: float) -> FirewallIP:
@@ -61,79 +55,66 @@ class FirewallIP(ComponentBase):
 
 
     def ip_is_whitelisted(self, ip: str) -> bool:
-        return ip in self.whitelist
+        return self.get_clientipaddr(ip).whitelisted
 
-    def add_ip_to_whitelist(self, ip: str) -> None:
-        if self.ip_is_whitelisted(ip):
-            self.lgr.debug("IP %s was allready whitelisted", ip)
-        self.whitelist.add(ip)
-
+    def whitelist_clientipaddr(self, ip: str, whitelist: bool) -> None:
+        client = self.get_clientipaddr(ip)
+        if client.c.whitelisted == whitelist:
+            return
+        client.c.whitelisted = whitelist
+        add_commit(client.c)
+        
     def ip_is_blacklisted(self, ip: str) -> bool:
-        return ip in self.blacklist
+        return self.get_clientipaddr(ip).blacklisted
     
-    def add_ip_to_blacklist(self, ip: str) -> None:
-        self.blacklist.add(ip)
-
+    def blacklist_clientipaddr(self, ip: str, blacklist: bool) -> None:
+        client = self.get_clientipaddr(ip)
+        if client.c.blacklisted == blacklist:
+            return
+        client.c.blacklisted = blacklist
+        add_commit(client.c)
+        return
 
     def process_request(self, req: Request) -> Response | Request:
         if self.firewall_disabled():
             return req
 
-        # using "." in python is expensive :')
-        ip = req.ip_address
+        client = self.get_clientipaddr(req.ip_address)
 
-        if self.ip_is_whitelisted(ip):
+        if client.c.whitelisted:
             return req
         
         if self.firewall_whitelist_only():
             return Response(flResponse("Only whitelisted IP address are let through.", status=401))
     
-        if self.ip_is_blacklisted(ip):
+        if client.c.blacklisted:
             return Response(flResponse("You are banned.", status=401))
 
         if self.firewall_all_except_blacklist():
             return req
 
-        self.register_incoming_request(ip)
+        client.register_incoming_request(self.time_window)
         
-        if self.ip_is_blocked(ip):
+        if client.too_many_requests(self.max_requests_in_time_window):
             return Response(flResponse("To many requests, you are currently banned.", status=401))
         
         return req
     
-    def register_incoming_request(self, ip: str) -> None:
-        """
-        Update cache with information on the traffic from this IP address.
-        """
-        curr_time = time()
-
-        if ip in self.registered_traffic:
-            # register new traffic record
-            ip_traffic = self.registered_traffic[ip]
-            ip_traffic.append(curr_time)
-
-            # find old traffic recorods
-            idx = -1
-            for i, t in enumerate(ip_traffic):
-                if curr_time - t > self.time_window:
-                    idx = i
-                    break
-
-            # discard old traffic records
-            if idx > -1:
-                ip_traffic = ip_traffic[idx+1:]
-                self.registered_traffic[ip] = ip_traffic
-            return
+    def get_clientipaddr(self, ip: str) -> ClientIPAddress:
+        client = self.client_cache.get(ip, None)
         
-        # ip not in registered_traffic
-        self.registered_traffic[ip] = [curr_time]
+        if client is None:
+            # client not in cache
+            with app.app_context():
+                clientdb: ClientIPAddressDB = ClientIPAddressDB.query.filter_by(ip_address=ip).first()
+                if clientdb is None:
+                    # client not in db
+                    clientdb = ClientIPAddressDB(ip_address=ip)
+                    db.session.add(clientdb)
+                    db.session.commit()
+                client = ClientIPAddress(clientdb)
+            self.client_cache[ip] = client
 
-    def ip_is_blocked(self, ip: str) -> bool:
-        """
-        IP address had made too many requests during time window.
-        """       
-        # count requests in time window
-        count = len(self.registered_traffic[ip])
-        return count > self.max_requests_in_time_window
+        return client
 
 

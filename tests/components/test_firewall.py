@@ -6,6 +6,13 @@ from time import sleep
 
 
 from manageablereverseproxy import Request, Response, FirewallIP
+from manageablereverseproxy.app import app, db
+
+
+with app.app_context():
+    db.create_all()
+    db.session.commit()
+    
 
 
 logging.basicConfig(level=-1)
@@ -45,14 +52,14 @@ class TestFirewallIP(unittest.TestCase):
 
     def test_whitelist_only(self):
         self.fw.set_max_requests_in_time_window(0)
-        self.fw.add_ip_to_whitelist(self.r1.ip_address)
+        self.fw.whitelist_clientipaddr(self.r1.ip_address, True)
 
         self.assertIsInstance(self.fw.process_request(self.r1), Request)
         self.assertIsInstance(self.fw.process_request(self.r2), Response)
 
     def test_whitelist_is_allowed_to_spam(self):
         self.fw.set_max_requests_in_time_window(10).set_time_window(1)
-        self.fw.add_ip_to_whitelist(self.r1.ip_address)
+        self.fw.whitelist_clientipaddr(self.r1.ip_address, True)
 
         for _ in range(1000):
             self.assertIsInstance(self.fw.process_request(self.r1), Request)

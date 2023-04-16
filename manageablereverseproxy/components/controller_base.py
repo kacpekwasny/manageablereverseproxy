@@ -1,3 +1,4 @@
+from .component_base import ComponentBase
 
 
 
@@ -9,3 +10,7 @@ class ControllerBase:
     """
 
 
+    def register_component(self, component: ComponentBase):
+        """
+        The usecase I am predicting for now is allowing controller to get reference to the shared object.
+        """

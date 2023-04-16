@@ -7,7 +7,6 @@ from time import time
 from ..component_base import ComponentBase, Response, Request
 
 
-
 class FirewallIP(ComponentBase):
     """
     Restrict the inbound requests from IP adresses.

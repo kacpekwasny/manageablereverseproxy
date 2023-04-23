@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from flask import Response as flResponse
+from sqlalchemy import inspect
 
 from ..component_base import ComponentBase, Response, Request
-from ...lgr import InheritLogger
+from ...logger import InheritLogger
 
-from .models import ClientIPAddress, ClientIPAddressDB
+from .models import ClientIPAddressDB
+from .client_ip_addr import ClientIPAddress
 from ...app import app, db, add_commit
 
 
@@ -76,42 +78,41 @@ class FirewallIP(ComponentBase, InheritLogger):
         return
 
     def process_request(self, req: Request) -> Response | Request:
-        if self.firewall_disabled():
-            return req
+        with app.app_context():
+            if self.firewall_disabled():
+                return req
 
-        client = self.get_clientipaddr(req.ip_address)
+            client = self.get_clientipaddr(req.ip_address)
 
-        if client.c.whitelisted:
+            if client.c.whitelisted:
+                return req
+            
+            if self.firewall_whitelist_only():
+                return Response(flResponse("Only whitelisted IP address are let through.", status=401))
+        
+            if client.c.blacklisted:
+                return Response(flResponse("You are banned.", status=401))
+
+            if self.firewall_all_except_blacklist():
+                return req
+
+            client.register_incoming_request(self.time_window)
+            
+            if client.too_many_requests(self.max_requests_in_time_window):
+                return Response(flResponse("To many requests, you are currently banned.", status=401))
+            
             return req
         
-        if self.firewall_whitelist_only():
-            return Response(flResponse("Only whitelisted IP address are let through.", status=401))
-    
-        if client.c.blacklisted:
-            return Response(flResponse("You are banned.", status=401))
-
-        if self.firewall_all_except_blacklist():
-            return req
-
-        client.register_incoming_request(self.time_window)
-        
-        if client.too_many_requests(self.max_requests_in_time_window):
-            return Response(flResponse("To many requests, you are currently banned.", status=401))
-        
-        return req
-    
     def get_clientipaddr(self, ip: str) -> ClientIPAddress:
         client = self.client_cache.get(ip, None)
         
-        if client is None:
+        if client is None or inspect(client.c).detached:
             # client not in cache
             with app.app_context():
                 clientdb: ClientIPAddressDB = ClientIPAddressDB.query.filter_by(ip_address=ip).first()
                 if clientdb is None:
                     # client not in db
                     clientdb = ClientIPAddressDB(ip_address=ip)
-                    db.session.add(clientdb)
-                    db.session.commit()
                 client = ClientIPAddress(clientdb)
             self.client_cache[ip] = client
 

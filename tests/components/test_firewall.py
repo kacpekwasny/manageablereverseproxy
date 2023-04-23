@@ -1,5 +1,4 @@
 import unittest
-import logging
 
 from flask import Request as flRequest
 from time import sleep
@@ -7,36 +6,43 @@ from time import sleep
 
 from manageablereverseproxy import Request, Response, FirewallIP
 from manageablereverseproxy.app import app, db
+from manageablereverseproxy.components.firewall_ip.client_ip_addr import ClientIPAddress
 
 
-with app.app_context():
-    db.create_all()
-    db.session.commit()
-    
-
-
-logging.basicConfig(level=-1)
 
 
 class TestFirewallIP(unittest.TestCase):
-    
+    fw: FirewallIP
+
     def setUp(self) -> None:
         self.fw = FirewallIP()
+        # self.fw.set(20)
         self.r1 = Request(flRequest({}))
         self.r1.ip_address = "ip1"
         
         self.r2 = Request(flRequest({}))
         self.r2.ip_address = "ip2"
 
+        self.fw.set_lgr_level(20)
+
+        with app.app_context():
+            db.drop_all()
+            db.session.commit()
+
+        with app.app_context():
+            db.create_all()
+            db.session.commit()
+
     def test_block_too_many_requests_time_window(self):
         self.fw.set_time_window(1).set_max_requests_in_time_window(5)
+        self.fw.set_lgr_level(0)
 
         for i in range(6):
             rr = self.fw.process_request(self.r1)
             if isinstance(rr, Response):
                 self.assertEqual(i, 5)
                 return
-            
+        
         self.fail("The Firewall should have blocked the request on the sixth `process_request`, but didn't.")
 
     def test_no_block_when_not_too_often(self):

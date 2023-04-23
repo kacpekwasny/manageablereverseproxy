@@ -20,8 +20,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+db.session.expire_on_commit = False
+
 def add_commit(*args):
     with app.app_context():
         for a in args:
             db.session.add(a)
-            db.session.commit()
+        db.session.commit()

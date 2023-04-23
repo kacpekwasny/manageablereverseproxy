@@ -1,0 +1,1 @@
+from .lgr import InheritLogger

@@ -20,9 +20,6 @@ class FirewallIP(ComponentBase, InheritLogger):
         self.disabled: bool = False
         """All traffic is passed directly through."""
         
-        self.client_cache: dict[str, ClientIPAddress] = {}
-        "Cache of `ClientIPAddr`"
-
         self.time_window: float = 60
         "Time window in which requests for an IP address cannot reach over specific number."
 

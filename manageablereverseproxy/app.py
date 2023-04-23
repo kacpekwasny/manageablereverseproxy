@@ -27,3 +27,9 @@ def add_commit(*args):
         for a in args:
             db.session.add(a)
         db.session.commit()
+
+
+from .components import FIREWALL_IP_CONTROLLER
+
+app.register_blueprint(FIREWALL_IP_CONTROLLER)
+

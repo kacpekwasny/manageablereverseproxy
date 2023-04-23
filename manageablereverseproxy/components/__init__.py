@@ -1,1 +1,1 @@
-from .firewall_ip.firewallip import FirewallIP
+from .firewall_ip.controller import FIREWALL_IP_CONTROLLER

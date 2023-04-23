@@ -1,0 +1,13 @@
+<!doctype html>
+<title>Firewall IP Controller</title>
+<section class="content">
+  <ul>
+      {% for client in ip_clients %}
+        <li>
+            <p>IP Address: {{ client.ip_address }}</p>
+            <p>is whitelisted: {{ client.whitelisted }}</p>
+            <p>is blacklisted: {{ client.blacklisted }}</p>
+        </li>
+      {% endfor %}
+  </ul>
+</section>

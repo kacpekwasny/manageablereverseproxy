@@ -1,5 +1,7 @@
 import datetime
-from app import db
+from manageablereverseproxy import manageablereverseproxy
+
+db = manageablereverseproxy.mrp.db
 
 
 class Firewall(db.Model):

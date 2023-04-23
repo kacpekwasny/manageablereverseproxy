@@ -19,7 +19,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
-# Create test user and 50 blog entries if do not exist
 @setupmethod
 def create_user():
     db.create_all()

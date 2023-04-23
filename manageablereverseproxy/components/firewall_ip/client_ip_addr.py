@@ -1,16 +1,43 @@
-from time import time
+from __future__ import annotations
 
+from time import time
+from sqlalchemy import inspect
+
+
+from ...app import app
 from ...logger import InheritLogger
 from .models import ClientIPAddressDB
 
 class ClientIPAddress(InheritLogger):
 
-    def __init__(self, c: ClientIPAddressDB) -> None:
-        if not isinstance(c, ClientIPAddressDB):
-            raise TypeError(f"{type(c)=}, but should be of type {ClientIPAddressDB}")
-        self.c = c
-        self.registered_traffic: list[float] = []
+    _client_cache: dict[str, ClientIPAddress] = {}
 
+
+    def __new__(cls, ip: str, *args, **kwargs) -> ClientIPAddress:
+        client = cls._client_cache.get(ip, None)
+        
+        if client is None \
+        or inspect(client.c).detached:
+            # client not in cache
+            # or client session timeout
+            
+            with app.app_context():
+                clientdb: ClientIPAddressDB = ClientIPAddressDB.query.filter_by(ip_address=ip).first()
+                if clientdb is None:
+                    # client not in db
+                    clientdb = ClientIPAddressDB(ip_address=ip)
+
+                client = super().__new__(cls)
+                client._init(client_db=clientdb)
+
+            cls._client_cache[ip] = client
+
+        return client
+
+    def _init(self, *, client_db: ClientIPAddressDB) -> None:
+        self.c = client_db
+        self.registered_traffic: list[float] = []
+    
     def register_incoming_request(self, time_window: float) -> None:
         """
         Update cache with information on the traffic from this IP address.
@@ -40,3 +67,7 @@ class ClientIPAddress(InheritLogger):
         # count requests in time window
         count = len(self.registered_traffic)
         return count > max_requests_in_time_window
+
+    @classmethod
+    def _dump_client_cache(cls):
+        cls._client_cache = {}

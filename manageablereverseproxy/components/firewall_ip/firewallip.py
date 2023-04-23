@@ -57,20 +57,20 @@ class FirewallIP(ComponentBase, InheritLogger):
 
 
     def ip_is_whitelisted(self, ip: str) -> bool:
-        return self.get_clientipaddr(ip).whitelisted
+        return ClientIPAddress(ip).whitelisted
 
     def whitelist_clientipaddr(self, ip: str, whitelist: bool) -> None:
-        client = self.get_clientipaddr(ip)
+        client = ClientIPAddress(ip)
         if client.c.whitelisted == whitelist:
             return
         client.c.whitelisted = whitelist
         add_commit(client.c)
         
     def ip_is_blacklisted(self, ip: str) -> bool:
-        return self.get_clientipaddr(ip).blacklisted
+        return ClientIPAddress(ip).blacklisted
     
     def blacklist_clientipaddr(self, ip: str, blacklist: bool) -> None:
-        client = self.get_clientipaddr(ip)
+        client = ClientIPAddress(ip)
         if client.c.blacklisted == blacklist:
             return
         client.c.blacklisted = blacklist
@@ -82,7 +82,7 @@ class FirewallIP(ComponentBase, InheritLogger):
             if self.firewall_disabled():
                 return req
 
-            client = self.get_clientipaddr(req.ip_address)
+            client = ClientIPAddress(req.ip_address)
 
             if client.c.whitelisted:
                 return req
@@ -103,19 +103,4 @@ class FirewallIP(ComponentBase, InheritLogger):
             
             return req
         
-    def get_clientipaddr(self, ip: str) -> ClientIPAddress:
-        client = self.client_cache.get(ip, None)
-        
-        if client is None or inspect(client.c).detached:
-            # client not in cache
-            with app.app_context():
-                clientdb: ClientIPAddressDB = ClientIPAddressDB.query.filter_by(ip_address=ip).first()
-                if clientdb is None:
-                    # client not in db
-                    clientdb = ClientIPAddressDB(ip_address=ip)
-                client = ClientIPAddress(clientdb)
-            self.client_cache[ip] = client
-
-        return client
-
 

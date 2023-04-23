@@ -15,6 +15,7 @@ class TestFirewallIP(unittest.TestCase):
     fw: FirewallIP
 
     def setUp(self) -> None:
+        ClientIPAddress._dump_client_cache()
         self.fw = FirewallIP()
         # self.fw.set(20)
         self.r1 = Request(flRequest({}))
@@ -27,11 +28,9 @@ class TestFirewallIP(unittest.TestCase):
 
         with app.app_context():
             db.drop_all()
-            db.session.commit()
-
-        with app.app_context():
             db.create_all()
             db.session.commit()
+
 
     def test_block_too_many_requests_time_window(self):
         self.fw.set_time_window(1).set_max_requests_in_time_window(5)

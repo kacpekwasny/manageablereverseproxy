@@ -1,7 +1,6 @@
 from time import perf_counter
 
 import requests
-from flask.scaffold import setupmethod
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, Response
 
@@ -42,8 +41,8 @@ SITE_NAME = "http://localhost:8080/"
 def proxy(path):
     start = perf_counter()
 
-    print(request.remote_addr)
-
+    if mrp.db.session.execute(mrp.db.select(Firewall).filter_by(ip_address=request.remote_addr)).scalar() is not None:
+        return Response("Access Denied", 401)
 
     try:
         global SITE_NAME

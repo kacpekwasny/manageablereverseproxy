@@ -8,8 +8,7 @@ from time import sleep
 from manageablereverseproxy import Request, Response, FirewallIP
 
 
-logging.basicConfig()
-logging.getLogger().setLevel(-1)
+logging.basicConfig(level=-1)
 
 
 class TestFirewallIP(unittest.TestCase):
@@ -61,7 +60,14 @@ class TestFirewallIP(unittest.TestCase):
         self.assertIsInstance(r, Response)
 
     def test_firewall_disabled(self):
+        self.fw.disable(True)
+        for _ in range(1000):
+            self.assertIsInstance(self.fw.process_request(self.r1), Request)
+            self.assertIsInstance(self.fw.process_request(self.r2), Request)
+
+    def test_firewall_all_except_blacklist(self):
         self.fw.set_time_window(0)
+        self.assertTrue(self.fw.firewall_all_except_blacklist())
         for _ in range(1000):
             self.assertIsInstance(self.fw.process_request(self.r1), Request)
             self.assertIsInstance(self.fw.process_request(self.r2), Request)

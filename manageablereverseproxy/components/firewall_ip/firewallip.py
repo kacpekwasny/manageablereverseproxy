@@ -4,8 +4,7 @@ import logging
 from flask import Response as flResponse
 from time import time
 
-from ..component import ComponentBase, Response, Request
-
+from ..component_base import ComponentBase, Response, Request
 
 
 class FirewallIP(ComponentBase):
@@ -14,6 +13,9 @@ class FirewallIP(ComponentBase):
     """
 
     def __init__(self) -> None:
+        self.disabled: bool = False
+        """All traffic is passed directly through."""
+        
         self.registered_traffic: dict[str, list[float]] = {}
         "Stores timestamps of incomping requests for ip address"
 
@@ -23,8 +25,11 @@ class FirewallIP(ComponentBase):
         self.max_requests_in_time_window: int = 200
         "If a request would be the 201 request during time_window, the request will be blocked (and registered)."
 
-        self.white_list: set[str] = set()
-        "Set of IP addresses that are allowed to spam how much they want (like an admin)."
+        self.whitelist: set[str] = set()
+        "Set of IP addresses that are allowed to send as many requests as they like (ex. IP of an admin / tester)."
+
+        self.blacklist: set[str] = set()
+        "Set of IP address from which all traffic will be blocked."
 
         self.lgr: logging.Logger = logging.getLogger()
 
@@ -42,19 +47,33 @@ class FirewallIP(ComponentBase):
             self.lgr.warning("FirewallIP allows only whitelisted IP addresses! This is because `req_num` was set to zero.")
         return self
 
+    def disable(self, disabled: bool) -> None:
+        self.disabled = disabled
+
     def firewall_disabled(self) -> bool:
-        return self.time_window == 0
+        return self.disabled
     
     def firewall_whitelist_only(self) -> bool:
-        return self.max_requests_in_time_window == 0
+        return self.max_requests_in_time_window < 1
     
+    def firewall_all_except_blacklist(self) -> bool:
+        return self.time_window == 0
+
+
     def ip_is_whitelisted(self, ip: str) -> bool:
-        return ip in self.white_list
+        return ip in self.whitelist
 
     def add_ip_to_whitelist(self, ip: str) -> None:
         if self.ip_is_whitelisted(ip):
             self.lgr.debug("IP %s was allready whitelisted", ip)
-        self.white_list.add(ip)
+        self.whitelist.add(ip)
+
+    def ip_is_blacklisted(self, ip: str) -> bool:
+        return ip in self.blacklist
+    
+    def add_ip_to_blacklist(self, ip: str) -> None:
+        self.blacklist.add(ip)
+
 
     def process_request(self, req: Request) -> Response | Request:
         if self.firewall_disabled():
@@ -68,7 +87,13 @@ class FirewallIP(ComponentBase):
         
         if self.firewall_whitelist_only():
             return Response(flResponse("Only whitelisted IP address are let through.", status=401))
-        
+    
+        if self.ip_is_blacklisted(ip):
+            return Response(flResponse("You are banned.", status=401))
+
+        if self.firewall_all_except_blacklist():
+            return req
+
         self.register_incoming_request(ip)
         
         if self.ip_is_blocked(ip):

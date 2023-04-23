@@ -1,4 +1,3 @@
-from .controller_base import ControllerBase
 from ..wrapperclass import Request, Response
 
 class ComponentBase:
@@ -13,7 +12,3 @@ class ComponentBase:
         """
         raise NotImplementedError("This function has to be implemented by child class.")
 
-    def register_controller(self, controller: ControllerBase):
-        """
-        The usecase I am predicting for now is allowing controller to get reference to the shared object.
-        """

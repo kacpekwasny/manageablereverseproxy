@@ -8,8 +8,8 @@ db = SQLAlchemy()
 
 app = Flask(__name__, )
 
-# Load config from file config.py
-app.config.from_pyfile('config.py')
+# Load config from file secret.py
+app.config.from_pyfile('secret.py')
 
 app.debug = True
 

@@ -4,8 +4,9 @@ from flask import Request as flRequest
 from time import sleep
 
 
-from manageablereverseproxy import Request, Response, FirewallIP
 from manageablereverseproxy.app import app, db
+from manageablereverseproxy.wrapperclass import Request, Response
+from manageablereverseproxy.components.firewall_ip.controller import FIREWALL_IP, FirewallIP
 from manageablereverseproxy.components.firewall_ip.client_ip_addr import ClientIPAddress
 
 

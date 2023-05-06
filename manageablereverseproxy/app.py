@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.debug = True
 
 
-app.config.from_pyfile('config.py')
+app.config.from_pyfile('secret.py')
 
 # app.config['SQLALCHEMY_DATABASE_URI'] = (f"mysql://{app.config['DB_USER']}:{app.config['DB_PASSWORD']}"
 #                                          f"@{app.config['DB_HOST']}/{app.config['DB_NAME']}")
@@ -20,6 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+# This line maybe helps with some issues that objects where timedout, or without context
 db.session.expire_on_commit = False
 
 def add_commit(*args):
@@ -28,8 +29,8 @@ def add_commit(*args):
             db.session.add(a)
         db.session.commit()
 
+# load the reverse proxy
+from . import reverseproxy
 
-from .components import FIREWALL_IP_CONTROLLER
 
-app.register_blueprint(FIREWALL_IP_CONTROLLER)
 

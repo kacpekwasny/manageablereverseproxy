@@ -4,7 +4,7 @@ import logging
 import sys
 
 
-logging.basicConfig(level=100)
+# logging.basicConfig(level=100)
 
 
 class InheritLogger:

@@ -7,8 +7,8 @@ from ...wrapperclass import Request, Response
 
 FIREWALL_IP_CONTROLLER = Blueprint("firewall_ip_controller", __name__, url_prefix='/firewall-ip-controller')
 
-FIREWALL_IP = FirewallIP().set_time_window(5).set_max_requests_in_time_window(100)
-FIREWALL_IP.set_lgr_level(20)
+FIREWALL_IP = FirewallIP().set_time_window(5).set_max_requests_in_time_window(4)
+FIREWALL_IP.set_lgr_level(-1)
 
 
 @FIREWALL_IP_CONTROLLER.route("/", methods=["GET"])

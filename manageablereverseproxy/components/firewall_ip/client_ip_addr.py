@@ -50,15 +50,17 @@ class ClientIPAddress(InheritLogger):
         # find old traffic recorods
         idx = -1
         for i, t in enumerate(self.registered_traffic):
-            if curr_time - t > time_window:
+            # no requests are older than time_window
+            if curr_time - t < time_window:
                 idx = i
                 break
 
+
         # discard old traffic records
         if idx > -1:
-            self.registered_traffic = self.registered_traffic[idx + 1:]
+            self.registered_traffic = self.registered_traffic[idx:]
 
-        self.lgr.debug(f"{self.registered_traffic}")
+        self.lgr.debug(f"{self.c.ip_address}: {self.registered_traffic}")
 
     def too_many_requests(self, max_requests_in_time_window: int) -> bool:
         """

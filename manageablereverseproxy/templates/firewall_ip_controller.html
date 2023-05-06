@@ -1,5 +1,13 @@
 <!doctype html>
 <title>Firewall IP Controller</title>
+
+<script>
+  async function whitelist(whitelist, ip_addr) {
+    resp = await fetch(`whitelist/${whitelist}/${ip_addr}`, {method: "POST"});
+    console.log(resp);
+  }
+</script>
+
 <section class="content">
   <table>
     <tr>
@@ -11,7 +19,11 @@
     {% for client in ip_clients %}
     <tr>
       <td>{{ client.ip_address }}</td>
-      <td>{{ client.whitelisted }}</td>
+      <td>
+        <button onclick="whitelist('{{ not client.whitelisted }}', '{{ client.ip_address }}')">
+          Currently: {{ client.whitelisted }}
+        </button>
+      </td>
       <td>{{ client.blacklisted }}</td>
     </tr>
     {% endfor %}

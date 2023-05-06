@@ -14,9 +14,24 @@ FIREWALL_IP.set_lgr_level(-1)
 @FIREWALL_IP_CONTROLLER.route("/", methods=["GET"])
 def index():
     clients = [client.c for client in ClientIPAddress._client_cache.values()]
-    print(clients)
-    rr = FIREWALL_IP.process_request(Request(request))
-    return render_template("base.html", ip_clients=clients)
+    return render_template("firewall_ip_controller.html", ip_clients=clients)
+
+@FIREWALL_IP_CONTROLLER.route("/whitelist/<add>/<ip_addr>", methods=["POST"])
+def whitelist(add: str, ip_addr: str):
+
+    add_to_whitelist = {
+        "True": True,
+        "False": False,
+    }.get(add, None)
+
+    if add_to_whitelist is None:
+        return 400, "`add` may be 'True' or 'False' string only."
+    
+    FIREWALL_IP.whitelist_clientipaddr(ip_addr, add_to_whitelist)
+    return "ok", 200
+
+
+
 
 
 

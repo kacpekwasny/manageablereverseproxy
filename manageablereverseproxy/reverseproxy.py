@@ -23,8 +23,12 @@ CONTROLLERS: list[Blueprint]     = [contr for comp, contr in COMP_CONTR_PAIRS]
 COMPONENTS:  list[ComponentBase] = [comp  for comp, contr in COMP_CONTR_PAIRS]
 
 
+admin_panel = Blueprint("admin_panel", __name__, url_prefix="/__reverse_proxy_admin_panel")
+
 for contr in CONTROLLERS:
-    app.register_blueprint(contr)
+    admin_panel.register_blueprint(contr)
+
+app.register_blueprint(admin_panel)
 
 
 @app.before_request

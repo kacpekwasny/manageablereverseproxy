@@ -12,8 +12,8 @@ def index(path: str):
 
 @app.route("/favicon.ico")
 def dummy():
-    return send_from_directory(str(REPO_DIR), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return send_from_directory(str(REPO_DIR / "assets"), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
 if __name__ == "__main__":
-    app.run(port="8001")
+    app.run(port=8001)

@@ -5,9 +5,10 @@ from manageablereverseproxy import REPO_DIR
 
 app = Flask(__name__)
 
-@app.route("/*")
-def index(path: str):
-    return "dupa" + path
+@app.route('/', defaults={'u_path': ''})
+@app.route("/<path:u_path>", methods=["GET"])
+def index(u_path: str):
+    return "<h1> dupa, powtarzam! uwaga, dupa! " + u_path + "</h1>"
 
 
 @app.route("/favicon.ico")

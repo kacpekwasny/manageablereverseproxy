@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, session
 from flask.scaffold import setupmethod
 from flask_sqlalchemy import SQLAlchemy
 
@@ -18,10 +18,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{str(REPO_DIR / 'assets/test
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+db = SQLAlchemy(app, session_options=dict(expire_on_commit=False))
 
 # This line maybe helps with some issues that objects where timedout, or without context
-db.session.expire_on_commit = False
+# db.session.expire_on_commit = False
+
 
 def add_commit(*args):
     with app.app_context():

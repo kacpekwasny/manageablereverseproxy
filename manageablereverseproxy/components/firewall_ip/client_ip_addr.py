@@ -78,6 +78,13 @@ class ClientIPAddress(InheritLogger):
         count = len(self.registered_traffic)
         return count > max_requests_in_time_window
 
+    def to_dict(self) -> dict:
+        return {
+            "ip_address": self.c.ip_address,
+            "whitelisted": self.c.whitelisted,
+            "blacklisted": self.c.blacklisted,
+        }
+
     @classmethod
     def _dump_client_cache(cls):
         cls._client_cache = {}

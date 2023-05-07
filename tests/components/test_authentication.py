@@ -33,7 +33,7 @@ class TestAuthentication(unittest.TestCase):
         })
         return Request(r)
 
-    def test_authentication(self):
+    def test_authentication_passthrough(self):
         """
         Good credentials -> request authenticated
         Bad credentials -> request unauthenticated
@@ -53,6 +53,8 @@ class TestAuthentication(unittest.TestCase):
 
                 r2 = self.auth.process_request(r2)
                 self.assertEqual(r2.user, None)
+
+
 
 
 with app.app_context():

@@ -8,14 +8,15 @@ from .app import app
 from .config import SITE_NAME
 from .wrapperclass import Request, Response
 from .components import FIREWALL_IP, FIREWALL_IP_CONTROLLER
+from .components import AUTHENTICATION, AUTHENTICATION_CONTROLLER
 from .components.component_base import ComponentBase
-from .components.controller_base import ControllerBase
 
 ALL_HTTP_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'CONNECT', 'OPTIONS', 'TRACE', 'PATCH']
 
 
 COMP_CONTR_PAIRS: list[tuple[ComponentBase, Blueprint]] = [
-    (FIREWALL_IP, FIREWALL_IP_CONTROLLER,),
+    (FIREWALL_IP,       FIREWALL_IP_CONTROLLER,),
+    (AUTHENTICATION,    AUTHENTICATION_CONTROLLER),
 ]
 """Currently active `(Component, Controller)` pairs"""
 
@@ -40,8 +41,8 @@ def before_every_request():
     for component in COMPONENTS:
         r = component.process_request(r)
 
-        if isinstance(r, Response):
-            # the component decided to block the request, and thus returns a response.
+        if not isinstance(r, Request):
+            # the component decided to [block / interacted with] the request, and thus returns a response.
             return r
         # is instance of Request, so the component did not block it
 

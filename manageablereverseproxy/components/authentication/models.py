@@ -14,6 +14,8 @@ WRITEABLE = ALPHANUM + string.punctuation
 def random_string_generator(length: int, choose_from: T.Iterable=ALPHANUM) -> str:
     return lambda: "".join([random.choice(choose_from) for _ in range(length)])
 
+user_id_generator = random_string_generator(20)
+token_generator = random_string_generator(50, choose_from=WRITEABLE)
 
 class UserDB(db.Model):
     __tablename__ = "users_authentication"
@@ -21,12 +23,12 @@ class UserDB(db.Model):
     created_at = db.Column(db.DateTime(), nullable=False, default=datetime.datetime.utcnow)
     modified_at = db.Column(db.DateTime(), nullable=False, default=datetime.datetime.utcnow)
 
-    username = db.Column(db.UnicodeText(), nullable=False)
-    user_id  = db.Column(db.UnicodeText(), nullable=False, default=random_string_generator(20))
+    username = db.Column(db.Text(), nullable=False)
+    user_id  = db.Column(db.Text(), nullable=False, default=user_id_generator)
     
-    token    = db.Column(db.UnicodeText(), nullable=False, default=random_string_generator(50, choose_from=WRITEABLE))
-    passhash = db.Column(db.UnicodeText(), nullable=False)
-    roles    = db.Column(db.UnicodeText(), nullable=False, default="")
+    token    = db.Column(db.Text(), nullable=False, default=token_generator)
+    passhash = db.Column(db.Text(), nullable=False)
+    roles    = db.Column(db.Text(), nullable=False, default="")
 
     def __repr__(self) -> str:
         return f"<{self.__class__} {self.id} username='{self.username}' token='{self.token}'>"

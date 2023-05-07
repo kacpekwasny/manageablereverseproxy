@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 def require_auth(func):
     def wraped(*args, **kwargs):
-        if request.headers.get(HeadersPrivate.USERNAME, None) is None:
+        if request.cookies.get(HeadersPrivate.USERNAME, None) is None:
             return "You are not logged in!", 404
         return func(*args, **kwargs)
     return wraped

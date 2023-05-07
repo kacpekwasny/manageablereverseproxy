@@ -50,11 +50,11 @@ class Authentication(ComponentBase, InheritLogger):
 
     def authenticate_request(self, r: Request) -> Request:
         """
-        If the request has headers with 
+        If the request has cookies with token 
         """
 
-        user_id = r.headers.get(HeadersPublic.USER_ID.value, None)
-        token   = r.headers.get(HeadersPublic.USER_TOKEN.value, None)
+        user_id = r.cookies.get(HeadersPublic.USER_ID.value, None)
+        token   = r.cookies.get(HeadersPublic.USER_TOKEN.value, None)
         if user_id is None or token is None:
             return r
         
@@ -109,9 +109,10 @@ class Authentication(ComponentBase, InheritLogger):
         user.token = new_token
         db.session.commit()
 
-        Response
+        r = flResponse("", 200)
+        r.set_cookie(HeadersPublic.USER_TOKEN.value, "token")
 
-        return new_token, 200
+        return Response(r)
     
     def logout_request(self, r: Request) -> SimpleHTTPResponse:
         if r.user is None:

@@ -3,7 +3,6 @@ from flask import Blueprint, render_template, request, send_file, send_from_dire
 
 from .firewallip import FirewallIP
 from .client_ip_addr import ClientIPAddress
-from ...wrapperclass import Request, Response
 
 FRONTEND_DIR = str(Path(__file__).parent / "frontend")
 

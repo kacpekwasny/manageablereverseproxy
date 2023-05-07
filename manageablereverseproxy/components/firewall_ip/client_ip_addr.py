@@ -36,7 +36,7 @@ class ClientIPAddress(InheritLogger):
 
         return client
 
-    def _init(self,) -> None:
+    def _init(self) -> None:
         self.c = None
         self.registered_traffic: list[float] = []
 

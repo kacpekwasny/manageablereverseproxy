@@ -3,7 +3,8 @@ from __future__ import annotations
 from flask import Response as flResponse
 from sqlalchemy import inspect
 
-from ..component_base import ComponentBase, Response, Request
+from ..component_base import ComponentBase
+from ...wrapperclass import Response, Request
 from ...logger import InheritLogger
 
 from .models import ClientIPAddressDB

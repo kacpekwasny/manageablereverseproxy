@@ -1,11 +1,12 @@
 
-from flask import Response as flResponse
+from flask import Response as flResponse, make_response, jsonify
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, verify_jwt_in_request
+from flask_jwt_extended.jwt_manager import ExpiredSignatureError
 
-
-from .models import UserDB, token_generator
+from .models import UserDB
 from ...headers import HeadersPrivate, HeadersPublic
 from ..component_base import ComponentBase
-from ...app import add_commit, db
+from ...app import add_commit, db, jwt
 from ...logger import InheritLogger
 from ...wrapperclass import Request, Response
 
@@ -18,14 +19,7 @@ class Authentication(ComponentBase, InheritLogger):
 
     def process_request(self, r: Request) -> Response | Request:
         r = self.remove_headers(r, [h.value for h in HeadersPrivate])
-
         r = self.authenticate_request(r)
-
-        r = self.user_action(r)
-        if not isinstance(r, Request):
-            return r
-
-        r = self.remove_headers(r, [h.value for h in HeadersPublic])
         return r
     
     def remove_headers(self, r: Request, headers: list[str]) -> Request:
@@ -36,29 +30,23 @@ class Authentication(ComponentBase, InheritLogger):
             r.headers.remove(h)
         return r
 
-    def user_action(self, r: Request) -> Request | SimpleHTTPResponse:
-        """
-        Check the method and URL, maybe this request is for the API to register, login or logout.
-        """
-        if r.path == "/register":
-            return self.register_request(r)
-        if r.path == "/login":
-            return self.login_request(r)
-        if r.path == "/logout":
-            return self.logout_request(r)
-        return r            
-
     def authenticate_request(self, r: Request) -> Request:
         """
         If the request has cookies with token 
         """
-
-        user_id = r.cookies.get(HeadersPublic.USER_ID.value, None)
-        token   = r.cookies.get(HeadersPublic.USER_TOKEN.value, None)
-        if user_id is None or token is None:
+        try:
+            verify_jwt_in_request(optional=True)
+        except ExpiredSignatureError:
+            print("not auth")
             return r
         
-        user: UserDB = UserDB.query.filter_by(user_id=user_id, token=token).first()
+        user_id = get_jwt_identity()
+        print(f"{user_id=}")
+        if user_id is None:
+            return r
+        
+        user: UserDB = UserDB.query.filter_by(user_id=user_id).first()
+        print("found user:", user)
 
         if user is None:
             return r
@@ -72,60 +60,6 @@ class Authentication(ComponentBase, InheritLogger):
         r.headers.set(HeadersPrivate.USERNAME, u.username)
         r.headers.set(HeadersPrivate.USER_ROLES, u.roles)
         return r
-
-    def register_request(self, r: Request) -> SimpleHTTPResponse:
-        """
-        Inbound request for user Register (account doesnt exist).
-        """
-        json = r.json
-        username = json["username"]
-        if not UserDB.query.filter_by(username=username).first() is None:
-            return "User with such username exists.", 409 # Conflict
-
-        password = json["password"]
-        if len(password) < 1:
-            return "You realy could have given that single charachter :/", 422 # Unprocessable Content
-
-
-        passhash = self.hash_password(password)
-        user = UserDB(username=username, passhash=passhash)
-        add_commit(user)
-        return "git", 200
-    
-    def login_request(self, r: Request) -> SimpleHTTPResponse:
-        """
-        Inbound request for user Login (account exists).
-        """
-        json = r.json
-        username = json["username"]
-        password = json["password"]
-        passhash = self.hash_password(password)
-        user = UserDB.query.filter_by(username=username, passhash=passhash).first()
-
-        if user is None:
-            return "Either 'username' or 'password' is incorrect.", 401
-
-        new_token = token_generator()
-        user.token = new_token
-        db.session.commit()
-
-        r = flResponse("", 200)
-        r.set_cookie(HeadersPublic.USER_TOKEN.value, "token")
-
-        return Response(r)
-    
-    def logout_request(self, r: Request) -> SimpleHTTPResponse:
-        if r.user is None:
-            return "Well, you should be very much logged in, in order to log out.", 401
-        r.user.token = token_generator()
-        db.session.commit()
-        return "Successfuly logged out", 200
-
-    def hash_password(self, password: str) -> str:
-        # TODO
-        return password
-
-
 
 
 

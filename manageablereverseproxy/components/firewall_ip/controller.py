@@ -14,6 +14,7 @@ FIREWALL_IP.set_lgr_level(-1)
 @FIREWALL_IP_CONTROLLER.route('/', defaults={'path': ''})
 @FIREWALL_IP_CONTROLLER.route("/<path:path>", methods=["GET"])
 def index(path):
+    print(request.user)
     if path == "":
         return send_from_directory(FRONTEND_DIR, "index.html")
     return send_from_directory(FRONTEND_DIR, path)

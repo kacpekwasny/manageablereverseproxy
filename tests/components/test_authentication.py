@@ -6,7 +6,7 @@ from flask import Request as flRequest
 from manageablereverseproxy.app import app, db, add_commit
 from manageablereverseproxy.wrapperclass import Request, Response
 from manageablereverseproxy.components.authentication.authentication import Authentication, HeadersPrivate, HeadersPublic
-from manageablereverseproxy.components.authentication.models import UserDB, random_string_generator
+from manageablereverseproxy.components.authentication.models import User, random_string_generator
 
 
 class TestAuthentication(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestAuthentication(unittest.TestCase):
             db.session.commit()
 
     def make_user(self) -> tuple[str, str]:
-        u = UserDB(username=random_string_generator(3)(),
+        u = User(username=random_string_generator(3)(),
                    passhash=random_string_generator(3)())
         add_commit(u)
         return u.user_id, u.token
@@ -49,7 +49,7 @@ class TestAuthentication(unittest.TestCase):
 
             for _ in range(5):  
                 r1 = self.auth.process_request(r1)
-                self.assertIsInstance(r1.user, UserDB)
+                self.assertIsInstance(r1.user, User)
 
                 r2 = self.auth.process_request(r2)
                 self.assertEqual(r2.user, None)

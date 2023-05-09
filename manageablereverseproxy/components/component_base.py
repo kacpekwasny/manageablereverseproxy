@@ -1,8 +1,8 @@
-from ..wrapperclass import Request, Response
+from ..wrapperclass import MyRequest, MyResponse
 
 class ComponentBase:
 
-    def process_request(self, r: Request) -> Response | Request:
+    def process_request(self, r: MyRequest) -> MyResponse | MyRequest:
         """
         Component has to overwrite this method.
 

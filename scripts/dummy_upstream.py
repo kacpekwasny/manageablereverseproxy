@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory, request
 
 from manageablereverseproxy import REPO_DIR
-from manageablereverseproxy.headers import HeadersPrivate
+from manageablereverseproxy.wrapperclass import HeadersPrivate
 
 
 app = Flask(__name__)
@@ -9,8 +9,12 @@ app = Flask(__name__)
 
 def require_auth(func):
     def wraped(*args, **kwargs):
-        if request.cookies.get(HeadersPrivate.USERNAME, None) is None:
-            return "You are not logged in!", 404
+        print(HeadersPrivate.USER_ID.value.__repr__(), "X-Priv-Mrp-User-Id")
+        print(HeadersPrivate.USER_ID.value == "X-Priv-Mrp-User-Id")
+        print(request.headers.get("X-Priv-Mrp-User-Id"))
+
+        if request.headers.get(HeadersPrivate.USER_ID.value, None) is None:
+            return "You are not logged in!", 401
         return func(*args, **kwargs)
     return wraped
 
@@ -28,10 +32,10 @@ def dummy():
 @require_auth
 def logged():
     return f"""
-            username: {request.headers.get(HeadersPrivate.USERNAME)}
+            username: {request.headers.get(HeadersPrivate.USERNAME.value)}
             <br>
-            roles: {request.headers.get(HeadersPrivate.USER_ROLES)}
+            user_id: {request.headers.get(HeadersPrivate.USER_ID.value)}
             """
 
 if __name__ == "__main__":
-    app.run(port=8001)
+    app.run(port=8001, debug=True)

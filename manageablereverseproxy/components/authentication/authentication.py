@@ -1,15 +1,11 @@
 
-from flask import Response as flResponse, make_response, jsonify
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager, verify_jwt_in_request
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from flask_jwt_extended.jwt_manager import ExpiredSignatureError
 
-from .models import UserDB
-from ...headers import HeadersPrivate, HeadersPublic
+from .models import User
 from ..component_base import ComponentBase
-from ...app import add_commit, db, jwt
 from ...logger import InheritLogger
-from ...wrapperclass import Request, Response
-
+from ...wrapperclass import MyRequest, MyResponse, HeadersPrivate
 
 SimpleHTTPResponse = tuple[str, int]
 
@@ -17,12 +13,12 @@ SimpleHTTPResponse = tuple[str, int]
 class Authentication(ComponentBase, InheritLogger):
 
 
-    def process_request(self, r: Request) -> Response | Request:
+    def process_request(self, r: MyRequest) -> MyResponse | MyRequest:
         r = self.remove_headers(r, [h.value for h in HeadersPrivate])
         r = self.authenticate_request(r)
         return r
     
-    def remove_headers(self, r: Request, headers: list[str]) -> Request:
+    def remove_headers(self, r: MyRequest, headers: list[str]) -> MyRequest:
         """
         Clear headers that are used internally.
         """
@@ -30,7 +26,7 @@ class Authentication(ComponentBase, InheritLogger):
             r.headers.remove(h)
         return r
 
-    def authenticate_request(self, r: Request) -> Request:
+    def authenticate_request(self, r: MyRequest) -> MyRequest:
         """
         If the request has cookies with token 
         """
@@ -45,7 +41,7 @@ class Authentication(ComponentBase, InheritLogger):
         if user_id is None:
             return r
         
-        user: UserDB = UserDB.query.filter_by(user_id=user_id).first()
+        user: User = User.query.filter_by(user_id=user_id).first()
         print("found user:", user)
 
         if user is None:
@@ -55,7 +51,7 @@ class Authentication(ComponentBase, InheritLogger):
         r.user = user
         return r
 
-    def set_headers_for_authenticated(self, r: Request, u: UserDB) -> Request:
+    def set_headers_for_authenticated(self, r: MyRequest, u: User) -> MyRequest:
         r.headers.set(HeadersPrivate.USER_ID, u.user_id)
         r.headers.set(HeadersPrivate.USERNAME, u.username)
         r.headers.set(HeadersPrivate.USER_ROLES, u.roles)

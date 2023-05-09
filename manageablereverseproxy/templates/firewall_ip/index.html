@@ -115,7 +115,7 @@
             <tr>
                 <td>Max requests:</td>
                 <td>
-                    <input v-model.number="config.max_requests">
+                    <input v-model.number="config.max_requests_in_time_window">
                 </td>
             </tr>
             <tr>
@@ -139,16 +139,16 @@
                 <th>Blacklisted</th>
             </tr>
 
-            <tr v-for="(client, idx) in clients" class="section">
-                <td>{{ client.ip_address }}</td>
+            <tr v-for="(client) in clients" class="section">
+                <td>[[ client.ip_address ]]</td>
                 <td>
-                    <button v-on:click="whitelist(!client.whitelisted, client.ip_address)">
-                        Currently: {{ client.whitelisted }}
+                    <button v-on:click="manageClientIP(client.ip_address, !client.whitelisted, client.blacklisted)">
+                        Currently: [[ client.whitelisted ]]
                     </button>
                 </td>
                 <td>
-                    <button v-on:click="blacklist(!client.blacklisted, client.ip_address)">
-                        Currently: {{ client.blacklisted }}
+                    <button v-on:click="manageClientIP(client.ip_address, client.whitelisted, !client.blacklisted)">
+                        Currently: [[ client.blacklisted ]]
                     </button>
                 </td>
             </tr>
@@ -165,38 +165,47 @@
             },
             async created() {
                 // Simple GET request using fetch
-                 
-                    fetch("clients.json").then(resp => {
-                        resp.json().then(json => this.clients = json)
-                    })
 
-                    fetch("config.json").then(resp => {
-                        resp.json().then(json => this.config = json)
-                    })
+                fetch("clients.json").then(resp => {
+                    resp.json().then(json => this.clients = json)
+                })
+
+                fetch("config.json").then(resp => {
+                    resp.json().then(json => this.config = json)
+                })
             },
             methods: {
-                async whitelist(add_white, ip_addr) {
-                    let resp = await fetch(`whitelist/${add_white}/${ip_addr}`, {method: "POST"});
-                    this.clients = await resp.json()
-                },
+                async POST(url, body) {
+                    return await fetch(url, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: {
+                            "Content-Type": "application/json",
+                        }
+                    });
 
-                async blacklist(add_white, ip_addr) {
-                    let resp = await fetch(`blacklist/${add_white}/${ip_addr}`, {method: "POST"});
-                    this.clients = await resp.json()
+                },
+                async manageClientIP(ip_addr, whitelisted, blacklisted) {
+                    let resp = await this.POST(`ipaddr/${ip_addr}`, {
+                        "whitelisted": whitelisted,
+                        "blacklisted": blacklisted,
+                    },);
+
+                    if (resp.status == 200) {
+                        resp = await resp.json()
+                        this.clients[resp.ip_address] = resp
+                    }
                 },
 
                 async setConfig() {
-                    let resp = await fetch(`config.json`, {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify(this.config),
-                            });
+                    let resp = await this.POST(`config.json`,
+                        this.config,
+                    );
                     this.config = await resp.json()
                 },
 
-            }
+            },
+            delimiters: ["[[", "]]"]
         }).mount('#app')
     </script>
 </body>

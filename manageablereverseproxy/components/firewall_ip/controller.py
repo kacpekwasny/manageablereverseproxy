@@ -1,25 +1,28 @@
 from pathlib import Path
-from flask import Flask, Blueprint, jsonify, request, send_from_directory, make_response
+from flask import Flask, Blueprint, jsonify, render_template, request, send_from_directory, make_response
 
 from .models import db, ClientIPAddress
-from .firewallip import FirewallIP
+from .firewallip import FirewallIP, FirewallIPConfig
 from ..authentication import require_auth
 from ... import REPO_DIR
 from ...wrapperclass import MyResponse
 
-FRONTEND_DIR = str(Path(__file__).parent / "frontend")
+CONFIG_FILE = str(Path(__file__).parent / "config.json")
 
 
-def app_add_firewall_ip_module(app: Flask, url_prefix: str="/firewallip"):
+
+def app_add_firewall_ip_module(app: Flask,
+                               url_prefix: str="/firewallip",
+                               config_path: str=CONFIG_FILE):
 
     firewallip_bp = Blueprint("firewall_ip_controller", __name__, url_prefix=url_prefix)
 
-    firewallip = FirewallIP().set_time_window(5).set_max_requests_in_time_window(4)
+    config = FirewallIPConfig(config_path)
+    firewallip = FirewallIP(config)
     firewallip.set_lgr_level(-1)
 
     @firewallip_bp.before_request
     def require_user_auth():
-        print(f"firewallip {request.user}")
         if request.user is None:
             return make_response(jsonify({"msg": "you need to be logged in for this endpoint"}), 401)
 
@@ -33,31 +36,25 @@ def app_add_firewall_ip_module(app: Flask, url_prefix: str="/firewallip"):
     @firewallip_bp.route('/', defaults={'path': ''})
     @firewallip_bp.route("/<path:path>", methods=["GET"])
     def index(path):
-        print(request.user)
-        if path == "":
-            return send_from_directory(FRONTEND_DIR, "index.html")
-        return send_from_directory(FRONTEND_DIR, path)
+        return render_template("firewall_ip/index.html")
 
 
     @firewallip_bp.route("/clients.json", methods=["GET"])
     def get_clients():
-        return [ client.to_dict() for client in ClientIPAddress.query.all() ]
+        return jsonify({ client.ip_address: client.to_dict() for client in ClientIPAddress.query.all() })
 
     @firewallip_bp.route("/config.json", methods=["GET"])
     def get_config():
-        return {
-            "time_window": firewallip.time_window,
-            "max_requests": firewallip.max_requests_in_time_window,
-            "disabled": firewallip.disabled,
-        }
+        return config._to_dict()
 
     @firewallip_bp.route("/config.json", methods=["POST"])
     def set_config():
         json = request.json
 
         firewallip.set_time_window(json["time_window"])
-        firewallip.set_max_requests_in_time_window(json["max_requests"])
+        firewallip.set_max_requests_in_time_window(json["max_requests_in_time_window"])
         firewallip.disable(json["disabled"])
+        config._save()
 
         return get_config()
 
@@ -76,11 +73,13 @@ def app_add_firewall_ip_module(app: Flask, url_prefix: str="/firewallip"):
         if cip is None:
             return jsonify({"ok": False, "msg": "IP address not in database."}), 404
 
+        print(1)
         json = request.json
         if "whitelisted" in json:
             cip.whitelisted = json["whitelisted"]
         if "blacklisted" in json:
             cip.blacklisted = json["blacklisted"]
+        print(2)
         
         db.session.commit()
 

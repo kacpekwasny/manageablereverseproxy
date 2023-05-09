@@ -33,7 +33,6 @@ class Authentication(ComponentBase, InheritLogger):
         try:
             verify_jwt_in_request(optional=True)
         except ExpiredSignatureError:
-            print("not auth")
             return r
         
         user_id = get_jwt_identity()

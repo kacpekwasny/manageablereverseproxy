@@ -18,5 +18,5 @@ if __name__ == "__main__":
 
         app_add_firewall_ip_module(app)
         app_add_authentication_module(app)
-        app_add_reverseproxy_module(app, "http://127.0.0.1:8001/")
+        app_add_reverseproxy_module(app)
         app.run(host="0.0.0.0", debug=True, port=8000)

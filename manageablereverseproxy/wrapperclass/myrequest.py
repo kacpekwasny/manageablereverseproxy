@@ -25,6 +25,7 @@ class MyRequest(Request):
     def __init__(self, environ, populate_request: bool = True, shallow: bool = False) -> None:
         super().__init__(environ, populate_request, shallow)
         self._mutable_headers()
+        self._render_ipaddress()
     
     def set_user(self, u: User):
         self.user = u

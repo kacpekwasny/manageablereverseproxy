@@ -1,8 +1,9 @@
 
 
 from datetime import timedelta, datetime, timezone
+import json
 from pathlib import Path
-from flask import Flask, jsonify, request, Blueprint, send_from_directory, make_response, abort
+from flask import Flask, jsonify, render_template, request, Blueprint, send_from_directory, make_response, abort
 from flask_jwt_extended import (
     JWTManager, create_access_token,
     get_jwt_identity, set_access_cookies,
@@ -13,17 +14,18 @@ from flask_jwt_extended.jwt_manager import ExpiredSignatureError, CSRFError
 
 from .models import db, User
 from .authentication import Authentication
+from ..config import ConfigBase
 from ...wrapperclass import MyRequest
 from ... import REPO_DIR
 from ...db import db
 
 
-FRONTEND_DIR = str(Path(__file__).parent / "frontend")
+CONFIG_FILE = str(Path(__file__).parent / "config.json")
 
 
-class Config:
-    REFRESH_DELTA = timedelta(minutes=15)
-    LOGIN_DELTA = timedelta(minutes=15)
+class AuthConfig(ConfigBase):
+    refresh_delta = 15 * 60   # seconds
+    login_delta   = 15 * 60   # seconds
 
 
 
@@ -42,7 +44,7 @@ def authenticate(request: MyRequest) -> MyRequest:
         user_id = get_jwt()["sub"]
         user = User.query.filter_by(user_id=user_id).first()
         if user is None:
-            abort(500, "user is None, but should exist.")
+            abort(500, "User is defined in cookie, but doesnt exist in database. Have you performed 'drop tables'? Hmmm?.")
         request.set_user(user)
         return request
     except (RuntimeError, KeyError, ExpiredSignatureError, CSRFError) as e:
@@ -53,17 +55,20 @@ def authenticate(request: MyRequest) -> MyRequest:
 def require_auth(f):
     def wraped_require_auth(*args, **kwargs):
         if request.user is None:
-            return make_response(jsonify({"msg": "you need to be logged in for this endpoint"}), 401)
+            return render_template("authentication/auth_required.html", request_path=request.path), 401
         return f(*args, **kwargs)
     wraped_require_auth.__name__ = f.__name__
     return wraped_require_auth
 
 
 def app_add_authentication_module(app: Flask,
-                                  url_prefix="/auth"):
+                                  url_prefix="/auth",
+                                  config_path: str=CONFIG_FILE):
     # NOTE: This is just a basic example of how to enable cookies. This is
     #       vulnerable to CSRF attacks, and should not be used as is. See
     #       csrf_protection_with_cookies.py for a more complete example!
+
+    config = AuthConfig(config_path)
     
     auth = Blueprint("authentication_controller", __name__, url_prefix=url_prefix)
 
@@ -107,7 +112,7 @@ def app_add_authentication_module(app: Flask,
                 return response
             exp_timestamp = get_jwt()["exp"]
             now = datetime.now(timezone.utc)
-            target_timestamp = datetime.timestamp(now + Config.REFRESH_DELTA)
+            target_timestamp = datetime.timestamp(now + timedelta(seconds=config.refresh_delta))
             if target_timestamp > exp_timestamp:
                 access_token = create_access_token(identity=get_jwt_identity())
                 set_access_cookies(response, access_token)
@@ -123,6 +128,9 @@ def app_add_authentication_module(app: Flask,
     # the cookie names and other settings via various app.config options
     @auth.route('/login', methods=['POST'])
     def login():
+        if isinstance(request.user, User):
+            return jsonify(msg="You need to log out first."), 401
+
         username = request.json.get('username', None)
         password = request.json.get('password', None)
         user = User.query.filter_by(username=username, passhash=hash_password(password)).first()
@@ -131,7 +139,7 @@ def app_add_authentication_module(app: Flask,
 
         # Create the tokens we will be sending back to the user
         access_token = create_access_token(identity=user.user_id,
-                                        expires_delta=Config.LOGIN_DELTA) # TODO: Configurable option
+                                        expires_delta=timedelta(seconds=config.login_delta)) # TODO: Configurable option
 
         # Set the JWT cookies in the response
         resp = jsonify({'login': True})
@@ -140,8 +148,18 @@ def app_add_authentication_module(app: Flask,
 
     @auth.route('/login', methods=['GET'])
     def login_form():
-        return send_from_directory(FRONTEND_DIR, "login.html")
+        return render_template("authentication/login.html", username=(request.user and request.user.username))
 
+    @auth.route('/get-my-info', methods=['GET'])
+    def get_info():
+        if isinstance(request.user, User):
+            return make_response(jsonify(authenticated=True,
+                                         username=request.user.username,
+                                         user_id=request.user.user_id),
+                                200)
+        
+        return make_response(jsonify(authenticated=False),
+                             401)
 
     # Because the JWTs are stored in an httponly cookie now, we cannot
     # log the user out by simply deleting the cookie in the frontend.
@@ -151,12 +169,20 @@ def app_add_authentication_module(app: Flask,
     @auth.route('/logout', methods=['GET'])
     @require_auth
     def logout():
-        resp = jsonify({'logout': True})
+        resp = make_response("""
+            <h2>Success.</h2>
+            <br>
+            <a href="login">Go to login page</a>
+            """, 200)
         print(resp.headers)
         print("~"*30)
         unset_jwt_cookies(resp)
         resp.logout_flag()
-        return resp, 200
+        return resp
+
+    @auth.route('/register', methods=['GET'])
+    def register_form():
+        return render_template("authentication/register.html")
 
     @auth.route('/register', methods=['POST'])
     def register_request():

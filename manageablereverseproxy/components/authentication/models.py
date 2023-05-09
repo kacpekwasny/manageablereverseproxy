@@ -16,7 +16,6 @@ def random_string_generator(length: int, choose_from: T.Iterable=ALPHANUM) -> st
     return lambda: "".join([random.choice(choose_from) for _ in range(length)])
 
 user_id_generator: T.Callable = random_string_generator(20)
-token_generator: T.Callable = random_string_generator(50, choose_from=WRITEABLE)
 
 
 class User(db.Model):
@@ -28,12 +27,11 @@ class User(db.Model):
     username = db.Column(db.Text(), nullable=False)
     user_id  = db.Column(db.Text(), nullable=False, default=user_id_generator)
     
-    token    = db.Column(db.Text(), nullable=False, default=token_generator)
     passhash = db.Column(db.Text(), nullable=False)
     roles    = db.Column(db.Text(), nullable=False, default="")
 
     def __repr__(self) -> str:
-        return f"<{self.__class__} {self.id} username='{self.username}' token='{self.token}'>"
+        return f"<{self.__class__} {self.id} username='{self.username}'>"
 
 
 

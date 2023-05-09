@@ -105,42 +105,56 @@
 
 
     <div id="app" class="h-100">
-        <div>
-            <label for="username-field">Username:</label>
-            <input v-model="username" name="username" id="username-field" />
-        </div>
-        <div>
-            <label for="password-field">Password</label>
-            <input v-model="password" name="password" id="password-field" />
-        </div>
-        <div>
-            <button v-on:click="postLogin(username, password)">Send my greetings</button>
-        </div>
+        <table>
+            <tr>
+                <td>site_name:</td>
+                <td>
+                    <input v-model="config.site_name">
+                </td>
+            </tr>
+            <tr>
+                <td>Save config: </td>
+                <td>
+                    <button v-on:click="setConfig()">Save</button>
+                </td>
+            </tr>
+        </table>
+
     </div>
     <script>
         app = Vue.createApp({
             data() {
                 return {
-                    username: "",
-                    password: "",
+                    config: {},
                 }
             },
 
-            async created() { },
+            async created() {
+                fetch("config.json").then(resp => {
+                    resp.json().then(json => this.config = json)
+                })
+            },
 
             methods: {
-                async postLogin(username, password) {
-                    let resp = await fetch("login",
-                        {
-                            method: "POST",
-                            body: JSON.stringify({username, password}),
-                            headers: {
-                                "Content-Type": "application/json"
-                            }
-                        });
-                    alert(JSON.stringify(await resp.json()))
+                async POST(url, body) {
+                    return await fetch(url, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: {
+                            "Content-Type": "application/json",
+                        }
+                    });
                 },
-            }
+
+                async setConfig() {
+                    let resp = await this.POST("config.json",
+                        this.config,
+                    );
+                    this.config = await resp.json()
+                },
+
+            },
+            delimeter: ["[[", "]]"]
         }).mount('#app')
     </script>
 </body>

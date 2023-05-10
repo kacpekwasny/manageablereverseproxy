@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %} Firewall IP {% endblock %}
+
+{% block content %}
+
+<script src="https://unpkg.com/vue@3"></script>
+
+
+<div id="app" class="h-100">
+    <div class="section">
+        <div class="section-title btn btn-dark">
+            Firewall IP Config
+        </div>
+        <div class="card">
+            <table>
+                <tr>
+                    <td>Time window:</td>
+                    <td>
+                        <input v-model.number="config.time_window">
+                    </td>
+                </tr>
+                <tr>
+                    <td>Max requests:</td>
+                    <td>
+                        <input v-model.number="config.max_requests_in_time_window">
+                    </td>
+                </tr>
+                <tr>
+                    <td>Firewall disabled:</td>
+                    <td>
+                        <input v-model.boolean="config.disabled" type="checkbox">
+                    </td>
+                </tr>
+                <tr>
+                    <td>Save config: </td>
+                    <td>
+                        <button v-on:click="setConfig()">Save</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="card">
+            <table>
+                <tr>
+                    <th>IP address</th>
+                    <th>Whitelisted</th>
+                    <th>Blacklisted</th>
+                </tr>
+        
+                <tr v-for="(client) in clients" class="section">
+                    <td>[[ client.ip_address ]]</td>
+                    <td>
+                        <button v-on:click="manageClientIP(client.ip_address, !client.whitelisted, client.blacklisted)">
+                            Currently: [[ client.whitelisted ]]
+                        </button>
+                    </td>
+                    <td>
+                        <button v-on:click="manageClientIP(client.ip_address, client.whitelisted, !client.blacklisted)">
+                            Currently: [[ client.blacklisted ]]
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+<script>
+    app = Vue.createApp({
+        data() {
+            return {
+                clients: {},
+                config: {},
+            }
+        },
+        async created() {
+            // Simple GET request using fetch
+
+            fetch("clients.json").then(resp => {
+                resp.json().then(json => this.clients = json)
+            })
+
+            fetch("config.json").then(resp => {
+                resp.json().then(json => this.config = json)
+            })
+        },
+        methods: {
+            async POST(url, body) {
+                return await fetch(url, {
+                    method: "POST",
+                    body: JSON.stringify(body),
+                    headers: {
+                        "Content-Type": "application/json",
+                    }
+                });
+
+            },
+            async manageClientIP(ip_addr, whitelisted, blacklisted) {
+                let resp = await this.POST(`ipaddr/${ip_addr}`, {
+                    "whitelisted": whitelisted,
+                    "blacklisted": blacklisted,
+                },);
+
+                if (resp.status == 200) {
+                    resp = await resp.json()
+                    this.clients[resp.ip_address] = resp
+                }
+            },
+
+            async setConfig() {
+                let resp = await this.POST(`config.json`,
+                    this.config,
+                );
+                this.config = await resp.json()
+            },
+
+        },
+        delimiters: ["[[", "]]"]
+    }).mount('#app')
+</script>
+
+{% endblock %}

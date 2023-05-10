@@ -1,1 +1,1 @@
-{"disabled": true, "max_requests_in_time_window": 20, "time_window": 3}
+{"disabled": false, "max_requests_in_time_window": 20, "time_window": 3}

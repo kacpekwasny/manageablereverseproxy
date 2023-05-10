@@ -1,13 +1,12 @@
 
 {% extends "base.html" %}
 
-{% block title %} 401 :( {% endblock %}
+{% block title %} Logout :) {% endblock %}
 
 {% block content %}
 <div class="section">
   <div class="card card-body">
-    <p class="section-title card-name">You are not logged in!</p>
-    <p class="card-desc">You can not access "{{ request_path }}"</p>
+    <p class="section-title card-name">You were successfully logged out!</p>
     <a href="/auth/login" class="section-button button-left">
       <h4 class="btn btn-dark">Go to login page.</h4>
     </a>

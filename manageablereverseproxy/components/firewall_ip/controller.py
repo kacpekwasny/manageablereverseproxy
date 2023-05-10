@@ -22,9 +22,9 @@ def app_add_firewall_ip_module(app: Flask,
     firewallip.set_lgr_level(-1)
 
     @firewallip_bp.before_request
+    @require_auth
     def require_user_auth():
-        if request.user is None:
-            return make_response(jsonify({"msg": "you need to be logged in for this endpoint"}), 401)
+        return
 
 
     @firewallip_bp.before_app_request
@@ -33,9 +33,8 @@ def app_add_firewall_ip_module(app: Flask,
         if isinstance(r, MyResponse):
             return r
 
-    @firewallip_bp.route('/', defaults={'path': ''})
-    @firewallip_bp.route("/<path:path>", methods=["GET"])
-    def index(path):
+    @firewallip_bp.route("/", methods=["GET"])
+    def index():
         return render_template("firewall_ip/index.html")
 
 
@@ -67,7 +66,6 @@ def app_add_firewall_ip_module(app: Flask,
         return jsonify(cip.to_dict() | {"ok": True}), 200
 
     @firewallip_bp.route("/ipaddr/<ip_addr>", methods=["POST"])
-    @require_auth
     def post_ipaddr(ip_addr: str):
         cip = ClientIPAddress.query.filter_by(ip_address=ip_addr).first()
         if cip is None:

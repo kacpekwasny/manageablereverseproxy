@@ -169,20 +169,14 @@ def app_add_authentication_module(app: Flask,
     @auth.route('/logout', methods=['GET'])
     @require_auth
     def logout():
-        resp = make_response("""
-            <h2>Success.</h2>
-            <br>
-            <a href="login">Go to login page</a>
-            """, 200)
-        print(resp.headers)
-        print("~"*30)
+        resp = make_response(render_template("authentication/logout.html"), 200)
         unset_jwt_cookies(resp)
         resp.logout_flag()
         return resp
 
     @auth.route('/register', methods=['GET'])
     def register_form():
-        return render_template("authentication/register.html")
+        return render_template("authentication/register.html", username=(request.user and request.user.username))
 
     @auth.route('/register', methods=['POST'])
     def register_request():
@@ -194,9 +188,12 @@ def app_add_authentication_module(app: Flask,
         if not User.query.filter_by(username=username).first() is None:
             return jsonify({"registered": True, "msg": "User with such username exists."}), 409 # HTTP Conflict
 
+        if len(username) < 1:
+            return jsonify({"registered": False, "msg": "You realy could have given that single charachter for 'username' :/"}), 422 # Unprocessable Content
+
         password = json["password"]
         if len(password) < 1:
-            return jsonify({"registered": True, "msg": "You realy could have given that single charachter :/"}), 422 # Unprocessable Content
+            return jsonify({"registered": False, "msg": "You realy could have given that single charachter for 'password' :/"}), 422 # Unprocessable Content
 
 
         passhash = hash_password(password)

@@ -85,18 +85,8 @@
             })
         },
         methods: {
-            async POST(url, body) {
-                return await fetch(url, {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: {
-                        "Content-Type": "application/json",
-                    }
-                });
-
-            },
             async manageClientIP(ip_addr, whitelisted, blacklisted) {
-                let resp = await this.POST(`ipaddr/${ip_addr}`, {
+                let resp = await POST(`ipaddr/${ip_addr}`, {
                     "whitelisted": whitelisted,
                     "blacklisted": blacklisted,
                 },);
@@ -108,7 +98,7 @@
             },
 
             async setConfig() {
-                let resp = await this.POST(`config.json`,
+                let resp = await POST(`config.json`,
                     this.config,
                 );
                 this.config = await resp.json()

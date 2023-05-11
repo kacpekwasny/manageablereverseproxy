@@ -41,10 +41,6 @@ def app_add_reverseproxy_module(app: Flask,
         request.headers.set("Authority", config.host_name)
         request.headers.set("Schema", config.schema)
 
-        # excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
-        # headers = {name: value for (name, value) in request.headers if
-        #                    name.lower() not in excluded_headers}
-
         r = requests.request(request.method,
                             url,
                             params=request.values,
@@ -53,7 +49,12 @@ def app_add_reverseproxy_module(app: Flask,
                             allow_redirects=False,
                             data=request.data)
 
-        return r.content, r.status_code, r.headers.items()
+        excluded_headers = ["content-encoding", "content-length", "transfer-encoding", "connection"]
+        headers = { name: value for (name, value) in request.headers if
+                           name.lower() not in excluded_headers }
+
+
+        return r.content, r.status_code, headers.items()
 
     @reverse_proxy.route('/reverseproxy/config', methods=["GET"])
     @require_auth

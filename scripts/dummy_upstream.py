@@ -10,15 +10,18 @@ app = Flask(__name__)
 def require_auth(func):
     def wraped(*args, **kwargs):
         if request.headers.get(HeadersPrivate.USER_ID.value, None) is None:
-            return redirect("/auth/login?")
+            return redirect("/auth/login"), 302
         return func(*args, **kwargs)
     return wraped
 
 @app.route('/', defaults={'u_path': ''})
 @app.route("/<path:u_path>", methods=["GET"])
 def index(u_path: str):
-    return "<h1> request! " + u_path + "</h1>"
-
+    return f"""
+    <h1> I am an upstream server!</h1>
+    <br>
+    <h3> You have requested pathadwawdawdw: {repr(u_path)} </h3>
+    """
 
 @app.route("/favicon.ico")
 def dummy():

@@ -169,7 +169,7 @@ def app_add_authentication_module(app: Flask,
     @auth.route('/logout', methods=['GET'])
     @require_auth
     def logout():
-        resp = make_response(render_template("authentication/logout.html"), 200)
+        resp = make_response(render_template("authentication/logout.html", username=(request.user and request.user.username)), 200)
         unset_jwt_cookies(resp)
         resp.logout_flag()
         return resp

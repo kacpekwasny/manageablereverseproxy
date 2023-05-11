@@ -121,6 +121,27 @@
             });
         }
     </script>
+    {% if username is not none and username is string %}
+    <div class="section">
+        <div class="card card-body">
+            <a href="/firewallip/config">
+                <h4 class="btn btn-dark section-button hover-scale">Firewall IP config</h4>
+            </a>
+        </div>
+        <div class="card card-body">
+            <a href="/reverseproxy/config">
+                <h4 class="btn btn-dark section-button hover-scale">Reverse proxy config</h4>
+            </a>
+        </div>
+        <div class="card card-body">
+            <a href="/auth/logout">
+                <h4 class="btn btn-dark section-button hover-scale">Log out</h4>
+            </a>
+        </div>
+    </div>
+    {% else %}
+    {% endif %}
+
     <div id="content">{% block content %}{% endblock %}</div>
 </body>
 

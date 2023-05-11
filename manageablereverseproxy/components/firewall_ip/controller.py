@@ -35,7 +35,7 @@ def app_add_firewall_ip_module(app: Flask,
 
     @firewallip_bp.route("/config", methods=["GET"])
     def index():
-        return render_template("firewall_ip/config.html")
+        return render_template("firewall_ip/config.html", username=(request.user and request.user.username))
 
     @firewallip_bp.route("/clients.json", methods=["GET"])
     def get_clients():

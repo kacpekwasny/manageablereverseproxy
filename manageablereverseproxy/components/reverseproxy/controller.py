@@ -58,7 +58,7 @@ def app_add_reverseproxy_module(app: Flask,
     @reverse_proxy.route('/reverseproxy/config', methods=["GET"])
     @require_auth
     def config_page_get():
-        return render_template("reverseproxy/config.html")
+        return render_template("reverseproxy/config.html", username=(request.user and request.user.username))
 
     @reverse_proxy.route('/reverseproxy/config.json', methods=["GET"])
     @require_auth
